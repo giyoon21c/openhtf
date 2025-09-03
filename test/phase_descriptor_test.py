@@ -25,11 +25,11 @@ from openhtf.core import phase_descriptor
 from openhtf.core import test_descriptor
 from openhtf.core import test_record
 from openhtf.core import test_state
+from openhtf.util import test as htf_test
 
 
 def plain_func():
   """Plain Docstring."""
-  pass
 
 
 def normal_test_phase():
@@ -88,7 +88,23 @@ def custom_placeholder_phase(custom):
   del custom  # Unused.
 
 
-class TestPhaseDescriptor(unittest.TestCase):
+@openhtf.PhaseOptions()
+def passing_phase():
+  return openhtf.PhaseResult.CONTINUE
+
+
+@openhtf.measures(
+    openhtf.Measurement('a_measurement').equals(True),
+    openhtf.Measurement('another_measurement').equals(True),
+    openhtf.Measurement('yet_another_measurement').equals(True),
+)
+def partially_passing_phase(test: openhtf.TestApi):
+  test.measurements.a_measurement = True
+  test.measurements.another_measurement = False
+  test.measurements.yet_another_measurement = True
+
+
+class TestPhaseDescriptor(htf_test.TestCase):
 
   def setUp(self):
     super(TestPhaseDescriptor, self).setUp()
@@ -116,7 +132,8 @@ class TestPhaseDescriptor(unittest.TestCase):
     phase = openhtf.PhaseDescriptor.wrap_or_copy(plain_func)
     second_phase = openhtf.PhaseDescriptor.wrap_or_copy(phase)
     for field in attr.fields(type(phase)):
-      if field.name == 'func':
+      if field.name in [openhtf.PhaseDescriptor.func.__name__,
+                        openhtf.PhaseDescriptor.func_location.__name__]:
         continue
       self.assertIsNot(
           getattr(phase, field.name), getattr(second_phase, field.name))
@@ -226,6 +243,24 @@ class TestPhaseDescriptor(unittest.TestCase):
                                               logging.get_absl_logger()))
     phase.with_args(arg_one=expected_arg_one)(self._test_state)
 
+  def test_call_overrides_phase_result(self):
+    phase = openhtf.PhaseOptions(stop_on_measurement_fail=True)(
+        partially_passing_phase)
+    record = self.execute_phase_or_test(
+        openhtf.Test(passing_phase, phase, passing_phase))
+    self.assertEqual(record.outcome, test_record.Outcome.FAIL)
+    self.assertEqual(record.phases[-1].name, phase.name)
+    self.assertEqual(record.phases[-1].result.phase_result,
+                     openhtf.PhaseResult.STOP)
+
+  def test_call_skips_phase_result_override(self):
+    phase = openhtf.PhaseOptions(stop_on_measurement_fail=False)(
+        partially_passing_phase)
+    record = self.execute_phase_or_test(
+        openhtf.Test(phase, passing_phase))
+    self.assertEqual(record.outcome, test_record.Outcome.FAIL)
+    self.assertEqual(record.phases[-1].name, passing_phase.name)
+
   def test_with_plugs(self):
     self._test_state.plug_manager.initialize_plugs([ExtraPlug])
     phase = extra_plug_func.with_plugs(plug=ExtraPlug).with_args(phrase='hello')
@@ -259,6 +294,33 @@ class TestPhaseDescriptor(unittest.TestCase):
     self.assertIs(phase.func, custom_placeholder_phase.func)
     self.assertEqual([base_plugs.PhasePlug('custom', PlugVersionOfNonPlug)],
                      phase.plugs)
+
+  def test_camel_phase_name_casing_formats_name(self):
+
+    @phase_descriptor.PhaseOptions(phase_name_case=openhtf.PhaseNameCase.CAMEL)
+    def snake_cased_phase():
+      """Empty function to generate phase descriptor."""
+
+    self.assertEqual(snake_cased_phase.name, 'SnakeCasedPhase')
+
+  def test_camel_phase_name_casing_formats_templated_name(self):
+    @phase_descriptor.PhaseOptions(
+        name='{snake}_cased_phase', phase_name_case=openhtf.PhaseNameCase.CAMEL
+    )
+    def snake_cased_phase():
+      """Empty function to generate phase descriptor."""
+
+    self.assertEqual(
+        snake_cased_phase.with_args(snake='snake').name, 'SnakeCasedPhase'
+    )
+
+  def test_keep_phase_name_casing_does_not_change_name(self):
+
+    @phase_descriptor.PhaseOptions(phase_name_case=openhtf.PhaseNameCase.KEEP)
+    def keep_case_phase():
+      """Empty function to generate phase descriptor."""
+
+    self.assertEqual(keep_case_phase.name, 'keep_case_phase')
 
 
 class DupeResultA(openhtf.DiagResultEnum):

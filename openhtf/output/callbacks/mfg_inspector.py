@@ -1,25 +1,39 @@
-"""Output and/or upload a TestRun or MfgEvent proto for mfg-inspector.com.
-"""
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import copy
-import json
+"""Output and/or upload a TestRun or MfgEvent proto for mfg-inspector.com."""
+
+import functools
 import logging
-import threading
 import time
-from typing import Any, Dict
 import zlib
+from typing import Optional
 
-import httplib2
-import oauth2client.client
-
-from openhtf import util
-from openhtf.core import test_record
+from google.auth import credentials as credentials_lib
+from google.auth.transport import requests
+from google.oauth2 import service_account
 from openhtf.output import callbacks
-from openhtf.output.proto import guzzle_pb2
-from openhtf.output.proto import mfg_event_pb2
 from openhtf.output.proto import test_runs_converter
-import six
-from six.moves import range
+
+from openhtf.output.proto import test_runs_pb2
+from openhtf.output.proto import mfg_event_pb2
+from openhtf.output.proto import guzzle_pb2
+
+from typing import Any, Dict, Union
+
+
+_MFG_INSPECTOR_UPLOAD_TIMEOUT = 60 * 5
 
 
 class UploadFailedError(Exception):
@@ -30,46 +44,76 @@ class InvalidTestRunError(Exception):
   """Raised if test run is invalid."""
 
 
-def _send_mfg_inspector_request(envelope_data, credentials, destination_url):
+def _send_mfg_inspector_request(
+    envelope_data: bytes,
+    authorized_session: requests.AuthorizedSession,
+    destination_url: str,
+) -> Dict[str, Any]:
   """Send upload http request.  Intended to be run in retry loop."""
   logging.info('Uploading result...')
-  http = httplib2.Http()
 
-  if credentials.access_token_expired:
-    credentials.refresh(http)
-  credentials.authorize(http)
-
-  resp, content = http.request(destination_url, 'POST', envelope_data)
+  response = authorized_session.request(
+      'POST',
+      destination_url,
+      data=envelope_data,
+      timeout=_MFG_INSPECTOR_UPLOAD_TIMEOUT,
+  )
 
   try:
-    result = json.loads(content)
-  except Exception:
-    logging.warning('Upload failed with response %s: %s', resp, content)
-    raise UploadFailedError(resp, content)
+    result = response.json()
+  except Exception as e:
+    logging.exception(
+        'Upload failed with response %s: %s', response, response.text
+    )
+    raise UploadFailedError(response, response.text) from e
 
-  if resp.status == 200:
+  if response.status_code == 200:
     return result
 
   message = '%s: %s' % (result.get('error',
                                    'UNKNOWN_ERROR'), result.get('message'))
-  if resp.status == 400:
+  if response.status_code == 400:
     raise InvalidTestRunError(message)
   else:
     raise UploadFailedError(message)
 
 
-def send_mfg_inspector_data(inspector_proto, credentials, destination_url,
-                            payload_type):
+@functools.lru_cache(len(guzzle_pb2.PayloadType.values()))
+def _is_compressed_payload_type(
+    payload_type: guzzle_pb2.PayloadType,
+) -> bool:
+  return (
+      guzzle_pb2.PayloadType.Name(payload_type)
+      .lower()
+      .startswith('compressed_')
+  )
+
+
+def send_mfg_inspector_data(
+    inspector_proto: Union[mfg_event_pb2.MfgEvent, test_runs_pb2.TestRun],
+    credentials: credentials_lib.Credentials,
+    destination_url: str,
+    payload_type: guzzle_pb2.PayloadType,
+    authorized_session: Optional[requests.AuthorizedSession] = None,
+) -> Dict[str, Any]:
   """Upload MfgEvent to steam_engine."""
-  envelope = guzzle_pb2.TestRunEnvelope()
-  envelope.payload = zlib.compress(inspector_proto.SerializeToString())
+  envelope = guzzle_pb2.TestRunEnvelope()  # pytype: disable=module-attr  # gen-stub-imports
+  data = inspector_proto.SerializeToString()
+  if _is_compressed_payload_type(payload_type):
+    data = zlib.compress(data)
+
+  envelope.payload = data
   envelope.payload_type = payload_type
   envelope_data = envelope.SerializeToString()
 
+  if authorized_session is None:
+    authorized_session = requests.AuthorizedSession(credentials)
+
   for _ in range(5):
     try:
-      result = _send_mfg_inspector_request(envelope_data, credentials,
-                                           destination_url)
+      result = _send_mfg_inspector_request(
+          envelope_data, authorized_session, destination_url
+      )
       return result
     except UploadFailedError:
       time.sleep(1)
@@ -78,26 +122,6 @@ def send_mfg_inspector_data(inspector_proto, credentials, destination_url,
       'Could not upload to mfg-inspector after 5 attempts. Giving up.')
 
   return {}
-
-
-class _MemStorage(oauth2client.client.Storage):
-  """Helper Storage class that keeps credentials in memory."""
-
-  def __init__(self):
-    self._lock = threading.Lock()
-    self._credentials = None
-
-  def acquire_lock(self):
-    self._lock.acquire(True)
-
-  def release_lock(self):
-    self._lock.release()
-
-  def locked_get(self):
-    return self._credentials
-
-  def locked_put(self, credentials):
-    self._credentials = credentials
 
 
 class MfgInspector(object):
@@ -111,7 +135,7 @@ class MfgInspector(object):
     my_custom_converter)
   my_tester.add_output_callbacks(interface.save_to_disk(), interface.upload())
 
-  **Important** the conversion of the TestRecord to protofbuf as specified in
+  **Important** the conversion of the TestRecord to protobuf as specified in
   the _converter callable attribute only occurs once and the resulting protobuf
   is cached in memory on the instance.
 
@@ -119,10 +143,10 @@ class MfgInspector(object):
   username and authentication key (which should be the key data itself, not a
   filename or file).
 
-  In typical productin setups, we *first* save the protobuf to disk then attempt
-  to upload the protobuf to mfg-inspector.  In the event of a network outage,
-  the result of the test run is available on disk and a separate process can
-  retry the upload when network is available.
+  In typical production setups, we *first* save the protobuf to disk then
+  attempt to upload the protobuf to mfg-inspector. In the event of a network,
+  outage the result of the test run is available on disk and a separate process
+  can retry the upload when the network is available.
   """
 
   TOKEN_URI = 'https://accounts.google.com/o/oauth2/token'
@@ -142,12 +166,6 @@ class MfgInspector(object):
   # saving to disk via save_to_disk.
   _default_filename_pattern = None
 
-  # Cached last partial upload of the run's MfgEvent.
-  _cached_partial_proto = None
-
-  # Partial proto fully uploaded.
-  _partial_proto_upload_complete = False
-
   def __init__(self,
                user=None,
                keydata=None,
@@ -159,15 +177,18 @@ class MfgInspector(object):
     self.destination_url = destination_url
 
     if user and keydata:
-      self.credentials = oauth2client.client.SignedJwtAssertionCredentials(
-          service_account_name=self.user,
-          private_key=six.ensure_binary(self.keydata),
-          scope=self.SCOPE_CODE_URI,
-          user_agent='OpenHTF Guzzle Upload Client',
-          token_uri=self.token_uri)
-      self.credentials.set_store(_MemStorage())
+      self.credentials = service_account.Credentials.from_service_account_info(
+          {
+              'client_email': self.user,
+              'token_uri': self.token_uri,
+              'private_key': self.keydata,
+              'user_agent': 'OpenHTF Guzzle Upload Client',
+          },
+          scopes=[self.SCOPE_CODE_URI])
+      self.authorized_session = requests.AuthorizedSession(self.credentials)
     else:
       self.credentials = None
+      self.authorized_session = None
 
     self.upload_result = None
 
@@ -204,48 +225,15 @@ class MfgInspector(object):
     """Convert and cache a test record to a mfg-inspector proto."""
     if (self._cached_proto is None or
         not self._check_cached_params(test_record_obj)):
+      if self._converter is None:
+        raise RuntimeError(
+            'Must set _converter on subclass or via set_converter before'
+            ' calling save_to_disk.'
+        )
       self._cached_proto = self._converter(test_record_obj)
       for param in self.PARAMS:
         self._cached_params[param] = getattr(test_record_obj, param)
     return self._cached_proto
-
-  def _get_blobref_from_cache(self, attachment_name: str):
-    """Gets the existing_blobref if attachment was already uploaded."""
-    if not self._cached_partial_proto:
-      return None
-
-    for attachment in self._cached_partial_proto.attachment:
-      if (attachment.name == attachment_name  and
-          attachment.HasField('existing_blobref')):
-        return attachment.existing_blobref
-
-  def _get_blobref_from_reply(self, reply: Dict[str, Any],
-                              attachment_name: str):
-    """Gets the existing_blobref if attachment was already uploaded."""
-    for item in reply['extendedParameters']:
-      if (item['name'] == attachment_name  and 'blobRef' in item):
-        return item['blobRef']
-
-  def _update_attachments_from_cache(self, proto: mfg_event_pb2.MfgEvent):
-    """Replaces attachments binary values with blobrefs when applicable."""
-    for attachment in proto.attachment:
-      if attachment.HasField('value_binary'):
-        blobref = self._get_blobref_from_cache(attachment.name)
-        if blobref:
-          attachment.ClearField('value')
-          attachment.existing_blobref = blobref
-
-  def _update_attachments_from_reply(self, proto: mfg_event_pb2.MfgEvent):
-    """Replaces attachments binary values with blorrefs when applicable."""
-    reply = json.loads(self.upload_result['lite_test_run'])
-    for attachment in proto.attachment:
-      if attachment.HasField('value_binary'):
-        literun_blobref = self._get_blobref_from_reply(reply, attachment.name)
-        if literun_blobref:
-          attachment.ClearField('value')
-          attachment.existing_blobref.blob_id = str.encode(
-              literun_blobref['BlobID'])
-          attachment.existing_blobref.size = int(literun_blobref['Size'])
 
   def save_to_disk(self, filename_pattern=None):
     """Returns a callback to convert test record to proto and save to disk."""
@@ -278,65 +266,20 @@ class MfgInspector(object):
     if not self.credentials:
       raise RuntimeError('Must provide credentials to use upload callback.')
 
+    if self.authorized_session is None:
+      self.authorized_session = requests.AuthorizedSession(self.credentials)
+
     def upload_callback(test_record_obj):
       proto = self._convert(test_record_obj)
-      self.upload_result = send_mfg_inspector_data(proto, self.credentials,
-                                                   self.destination_url,
-                                                   payload_type)
+      self.upload_result = send_mfg_inspector_data(
+          proto,
+          self.credentials,
+          self.destination_url,
+          payload_type,
+          self.authorized_session,
+      )
 
     return upload_callback
-
-  def partial_upload(self, payload_type: int = guzzle_pb2.COMPRESSED_TEST_RUN):
-    """Returns a callback to partially upload a test record as a MfgEvent."""
-    if not self._converter:
-      raise RuntimeError(
-          'Must set _converter on subclass or via set_converter before calling '
-          'partial_upload.')
-
-    if not self.credentials:
-      raise RuntimeError('Must provide credentials to use partial_upload '
-                         'callback.')
-
-    def partial_upload_callback(test_record_obj: test_record.TestRecord):
-      if not test_record_obj.end_time_millis:
-        # We cannot mutate the test_record_obj, so we copy it to add a
-        # fake end_time_millis which is needed for MfgEvent construction.
-        try:
-          tmp_test_record = copy.deepcopy(test_record_obj)
-        except TypeError:
-          # This happens when test has errored but the partial_uploader got a
-          # hold of the test record before it is finalized. We force an errored
-          # test to be processed with zero deepcopy thus only after
-          # end_time_mills is set in the test record.
-          print('Skipping this upload cycle, waiting for test to be finalized')
-          return {}
-        tmp_test_record.end_time_millis = util.time_millis()
-        # Also fake a PASS outcome for now.
-        tmp_test_record.outcome = test_record.Outcome.PASS
-        proto = self._convert(tmp_test_record)
-        proto.test_run_type = mfg_event_pb2.TEST_RUN_PARTIAL
-      else:
-        proto = self._convert(test_record_obj)
-        proto.test_run_type = mfg_event_pb2.TEST_RUN_COMPLETE
-      # Replaces the attachment payloads already uploaded with their blob_refs.
-      if (self._cached_partial_proto and
-          self._cached_partial_proto.start_time_ms == proto.start_time_ms):
-        # Reads the attachments in the _cached_partial_proto and merge them into
-        # the proto.
-        self._update_attachments_from_cache(proto)
-      # Avoids timing issue whereby last complete upload performed twice.
-      # This is only for projects that use a partial uploader to mfg-inspector.
-      if not self._partial_proto_upload_complete:
-        self.upload_result = send_mfg_inspector_data(
-            proto, self.credentials, self.destination_url, payload_type)
-      # Reads the upload_result (a lite_test_run proto) and update the
-      # attachments blob_refs.
-      self._update_attachments_from_reply(proto)
-      if proto.test_run_type == mfg_event_pb2.TEST_RUN_COMPLETE:
-        self._partial_proto_upload_complete = True
-      return self.upload_result
-
-    return partial_upload_callback
 
   def set_converter(self, converter):
     """Set converter callable to convert a OpenHTF tester_record to a proto.

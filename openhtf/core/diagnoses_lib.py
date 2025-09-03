@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as: python3
 """Diagnoses: Measurement and meta interpreters.
 
 Diagnoses are higher level signals that result from processing multiple
@@ -108,7 +107,7 @@ still run.
   def block_test_diag(test_record, diagnoses_store):
     if (diagnoses_store.has_diagnosis_result(
             BlockStatusResult.BLOCK0_OUT_OF_SPEC) and
-        diagnoses_store.has_diganosis_result(
+        diagnoses_store.has_diagnosis_result(
             BlockStatusResult.BLOCK1_OUT_OF_SPEC)):
       return openhtf.Diagnosis(
           BlockStatusResult.UNIT_OUT_OF_SPEC,
@@ -123,15 +122,14 @@ still run.
 """
 
 import abc
+from collections.abc import Iterable as CollectionsIterable
+import enum
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Text, Type, TYPE_CHECKING, Union
 
 import attr
-import enum  # pylint: disable=g-bad-import-order
 from openhtf.core import test_record
 from openhtf.util import data
-import six
-from six.moves import collections_abc
 
 if TYPE_CHECKING:
   from openhtf.core import test_state  # pylint: disable=g-import-not-at-top
@@ -205,8 +203,8 @@ class DiagnosesManager(object):
       return
     elif isinstance(diagnosis_or_diagnoses, Diagnosis):
       yield self._verify_and_fix_diagnosis(diagnosis_or_diagnoses, diagnoser)
-    elif (isinstance(diagnosis_or_diagnoses, six.string_types) or
-          not isinstance(diagnosis_or_diagnoses, collections_abc.Iterable)):
+    elif (isinstance(diagnosis_or_diagnoses, str) or
+          not isinstance(diagnosis_or_diagnoses, CollectionsIterable)):
       raise InvalidDiagnosisError(
           'Diagnoser {} must return a single Diagnosis or an iterable '
           'of them.'.format(diagnoser.name))
@@ -326,10 +324,9 @@ class _BaseDiagnoser(object):
 
   def _check_definition(self) -> None:
     """Internal function to verify that the diagnoser is completely defined."""
-    pass
 
 
-class BasePhaseDiagnoser(six.with_metaclass(abc.ABCMeta, _BaseDiagnoser)):
+class BasePhaseDiagnoser(_BaseDiagnoser, abc.ABC):
   """Base class for using an object to define a Phase diagnoser."""
 
   __slots__ = ()
@@ -378,7 +375,7 @@ class PhaseDiagnoser(BasePhaseDiagnoser):
           'PhaseDiagnoser run function not defined for {}'.format(self.name))
 
 
-class BaseTestDiagnoser(six.with_metaclass(abc.ABCMeta, _BaseDiagnoser)):
+class BaseTestDiagnoser(_BaseDiagnoser, abc.ABC):
   """Base class for using an object to define a Test diagnoser."""
 
   __slots__ = ()

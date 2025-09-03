@@ -1,18 +1,30 @@
-# Lint as: python3
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Tests for Diagnoses in OpenHTF."""
 
+import enum
 import time
 import unittest
+from unittest import mock
 
-import enum  # pylint: disable=g-bad-import-order
-import mock
 import openhtf as htf
 from openhtf.core import diagnoses_lib
 from openhtf.core import measurements
 from openhtf.core import test_record
 from openhtf.util import data
 from openhtf.util import test as htf_test
-import six
 
 
 class DiagPhaseError(Exception):
@@ -186,7 +198,7 @@ class DiagnoserTest(unittest.TestCase):
 
   def test_phase_diagnoser_name_from_function(self):
 
-    @htf.PhaseDiagnoser(OkayResult.OKAY)
+    @htf.PhaseDiagnoser(OkayResult.OKAY)  # pytype: disable=wrong-arg-types  # use-enum-overlay
     def from_function(phase_record):
       del phase_record  # Unused.
       return None
@@ -195,7 +207,7 @@ class DiagnoserTest(unittest.TestCase):
 
   def test_phase_diagnoser_name_set(self):
 
-    @htf.PhaseDiagnoser(OkayResult.OKAY, name='from_arg')
+    @htf.PhaseDiagnoser(OkayResult.OKAY, name='from_arg')  # pytype: disable=wrong-arg-types  # use-enum-overlay
     def from_function(phase_record):
       del phase_record  # Unused.
       return None
@@ -218,7 +230,7 @@ class DiagnoserTest(unittest.TestCase):
 
   def test_test_diagnoser_name_from_function(self):
 
-    @htf.TestDiagnoser(OkayResult.OKAY)
+    @htf.TestDiagnoser(OkayResult.OKAY)  # pytype: disable=wrong-arg-types  # use-enum-overlay
     def from_function(test_record_, store):
       del test_record_  # Unused.
       del store  # Unused.
@@ -228,7 +240,7 @@ class DiagnoserTest(unittest.TestCase):
 
   def test_test_diagnoser_name_set(self):
 
-    @htf.TestDiagnoser(OkayResult.OKAY, name='from_arg')
+    @htf.TestDiagnoser(OkayResult.OKAY, name='from_arg')  # pytype: disable=wrong-arg-types  # use-enum-overlay
     def from_function(test_record_, store):
       del test_record_  # Unused.
       del store  # Unused.
@@ -1079,14 +1091,14 @@ class DiagnosesTest(htf_test.TestCase):
   def test_phase_diagnoser_serialization(self):
     converted = data.convert_to_base_types(basic_wrapper_phase_diagnoser)
     self.assertEqual('basic_wrapper_phase_diagnoser', converted['name'])
-    six.assertCountEqual(self, ['okay', 'fine', 'great', 'test_ok'],
-                         converted['possible_results'])
+    self.assertCountEqual(['okay', 'fine', 'great', 'test_ok'],
+                          converted['possible_results'])
 
   def test_test_diagnoser_serialization(self):
     converted = data.convert_to_base_types(basic_wrapper_test_diagnoser)
     self.assertEqual('basic_wrapper_test_diagnoser', converted['name'])
-    six.assertCountEqual(self, ['okay', 'fine', 'great', 'test_ok'],
-                         converted['possible_results'])
+    self.assertCountEqual(['okay', 'fine', 'great', 'test_ok'],
+                          converted['possible_results'])
 
   @htf_test.yields_phases
   def test_test_record_diagnosis_serialization(self):
@@ -1152,6 +1164,7 @@ class DiagnosesTest(htf_test.TestCase):
                   is_value_set=True,
                   stored_value=True,
                   cached_value=True),
+              set_time_millis=phase_record.measurements['pass_measure'].set_time_millis,
               cached=mock.ANY), phase_record.measurements['pass_measure'])
       self.assertEqual(
           htf.Measurement(
@@ -1163,6 +1176,7 @@ class DiagnosesTest(htf_test.TestCase):
                   stored_value=False,
                   cached_value=False),
               validators=[is_true],
+              set_time_millis=phase_record.measurements['fail_measure'].set_time_millis,
               cached=mock.ANY), phase_record.measurements['fail_measure'])
       return None
 
