@@ -1,26 +1,22 @@
 import openhtf as htf
 import random
 
-
-# Always pass
+@htf.PhaseOptions(timeout_s=5)
 def phase_pass(test):
   return htf.PhaseResult.CONTINUE
 
-# Retries on failure
+@htf.PhaseOptions(repeat_limit=5) # Retries up to 3 times in case of failure
 def phase_retry(test):
+
   choice = random.choice([True, False])
-  print(f'choice: {choice}')
+  print(choice)
   if choice:
     return htf.PhaseResult.CONTINUE
   else:
     return htf.PhaseResult.REPEAT
 
-# Fail and stop the test
-def phase_fail(test):
-  return htf.PhaseResult.STOP
-
 def main():
-  test = htf.Test(phase_pass, phase_retry, phase_fail)
+  test = htf.Test(phase_pass, phase_retry)
   test.execute(lambda: "SN1234")
 
 if __name__ == '__main__':
