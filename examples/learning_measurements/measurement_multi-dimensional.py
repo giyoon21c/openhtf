@@ -3,6 +3,13 @@ from openhtf.util import units
 import random
 import time
 
+import os.path
+from openhtf import PhaseNameCase, output
+from openhtf.output.callbacks import json_factory
+
+output_dir = "."
+
+
 @htf.measures(
     htf.Measurement("voltage_over_time")
     .with_dimensions(units.SECOND, units.VOLT) # Input axes: time, voltage
@@ -18,8 +25,16 @@ def phase_voltage_measurement(test):
         time.sleep(0.1)
 
 def main():
-    test = htf.Test(phase_voltage_measurement)
-    test.execute(lambda: "SN1234")
+  test = htf.Test(phase_voltage_measurement)
+
+  # adds json output
+  test.add_output_callbacks(
+      json_factory.OutputToJSON(
+          os.path.join(output_dir, '{dut_id}.multi-measumrents.json'), indent=2
+      )
+  )
+  
+  test.execute(lambda: "SN1234")
 
 if __name__ == "__main__":
     main()
