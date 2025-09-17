@@ -1,0 +1,45 @@
+==
+date:
+9.17.2025
+
+topic:
+pip list
+
+Package            Version
+------------------ -----------
+attrs              25.3.0
+cachetools         5.5.2
+certifi            2025.8.3
+cffi               1.17.1
+charset-normalizer 3.4.3
+colorama           0.4.6
+contextlib2        21.6.0
+cryptography       45.0.7
+google-auth        2.40.3
+idna               3.10
+inflection         0.5.1
+mutablerecords     0.4.1
+numpy              2.3.2
+openhtf            1.6.1
+pandas             2.3.2
+pip                25.1.1
+protobuf           6.32.0
+pyasn1             0.6.1
+pyasn1_modules     0.4.2
+pycparser          2.22
+pyOpenSSL          25.1.0
+python-dateutil    2.9.0.post0
+pytz               2025.2
+PyYAML             6.0.2
+requests           2.32.5
+rsa                4.9.1
+six                1.17.0
+sockjs-tornado     1.0.7
+tornado            6.4.2
+typing_extensions  4.15.0
+tzdata             2025.2
+urllib3            2.5.0
+
+python --Version
+Python 3.13.5
+
