@@ -1,0 +1,72 @@
+==
+date:
+9.19.2025
+
+topic:
+Plugs
+
+ref:
+https://www.openhtf.io/plugs
+
+
+* plugs
+manage external hardware and resources with reusable logic
+
+
+* overview
+Hardware tests often require connections to external resources like instruments,
+UUTs, or other softwares. OpenHTF manages these connections through Plugs,
+reusable classes that handle resource initialization, control, and cleanup,
+separating test logic from resource management for easier maintenance and better
+logging.
+
+
+* syntax
+
+A plug is a standard Python class that inherits from BasePlug.
+
+--multimeter_plug.py--
+
+from openhtf import plugs
+import random
+
+class MultimeterPlug(plugs.BasePlug):
+  def __init__(self):
+    # Simulate connecting to the multimeter
+    self.connected = True
+ 
+  def tearDown(self):
+    # Automatically called by OpenHTF after the test to clean up
+    self.connected = False
+ 
+  def measure_voltage(self):
+    # Simulate voltage measurement
+    return random.uniform(0, 10)
+ 
+  def measure_current(self):
+    # Simulate current measurement
+    return random.uniform(0, 2)
+----
+
+
+* usage
+
+--main.py--
+import openhtf as htf
+from multimeter_plug import MultimeterPlug
+
+@htf.plug(multimeter=MultimeterPlug)
+def phase_test(test, multimeter):
+  # Use the plug to measure voltage and current
+  voltage = multimeter.measure_voltage()
+  current = multimeter.measure_current()
+
+def main():
+  test = htf.Test(phase_test)
+  test.execute(lambda: "SN1234")
+
+if __name__ == "__main__":
+  main()
+----
+
+
