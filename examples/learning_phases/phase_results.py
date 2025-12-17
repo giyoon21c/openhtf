@@ -1,13 +1,16 @@
+
 import openhtf as htf
 import random
 
 
 # Always pass
 def phase_pass(test):
+  print('\nphase_pass')
   return htf.PhaseResult.CONTINUE
 
 # Retries on failure
 def phase_retry(test):
+  print('\nphase_retry')
   choice = random.choice([True, False])
   print(f'choice: {choice}')
   if choice:
@@ -17,6 +20,7 @@ def phase_retry(test):
 
 # Fail and stop the test
 def phase_fail(test):
+  print('\nphase_fail')
   return htf.PhaseResult.STOP
 
 def main():
