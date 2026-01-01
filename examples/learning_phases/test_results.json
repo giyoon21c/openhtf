@@ -1,0 +1,208 @@
+{
+  "dut_id": "SN1234",
+  "start_time_millis": 1767311533282,
+  "end_time_millis": 1767311533283,
+  "outcome": "PASS",
+  "outcome_details": [],
+  "marginal": false,
+  "metadata": {
+    "test_name": "openhtf_test",
+    "config": {
+      "attachments_directory": null,
+      "plug_teardown_timeout_s": 0,
+      "allow_unset_measurements": false,
+      "station_id": "giyoon.c.googlers.com",
+      "cancel_timeout_s": 2,
+      "stop_on_first_failure": false,
+      "capture_source": false
+    }
+  },
+  "phases": [
+    {
+      "measurements": {},
+      "options": {
+        "name": null,
+        "timeout_s": null,
+        "run_if": null,
+        "requires_state": false,
+        "force_repeat": false,
+        "repeat_on_measurement_fail": false,
+        "repeat_on_timeout": false,
+        "repeat_limit": null,
+        "run_under_pdb": false,
+        "phase_name_case": "KEEP",
+        "stop_on_measurement_fail": false
+      },
+      "diagnosers": [],
+      "subtest_name": null,
+      "start_time_millis": 1767311533281,
+      "end_time_millis": 1767311533282,
+      "attachments": {},
+      "diagnosis_results": [],
+      "failure_diagnosis_results": [],
+      "result": {
+        "phase_result": "CONTINUE"
+      },
+      "outcome": "PASS",
+      "marginal": false,
+      "descriptor_id": 139688169198816,
+      "name": "trigger_phase",
+      "codeinfo": {
+        "name": "",
+        "docstring": null,
+        "sourcecode": ""
+      }
+    },
+    {
+      "measurements": {},
+      "options": {
+        "name": "new_phase_name",
+        "timeout_s": null,
+        "run_if": null,
+        "requires_state": false,
+        "force_repeat": false,
+        "repeat_on_measurement_fail": false,
+        "repeat_on_timeout": false,
+        "repeat_limit": null,
+        "run_under_pdb": false,
+        "phase_name_case": "CAMEL",
+        "stop_on_measurement_fail": false
+      },
+      "diagnosers": [],
+      "subtest_name": null,
+      "start_time_millis": 1767311533282,
+      "end_time_millis": 1767311533283,
+      "attachments": {},
+      "diagnosis_results": [],
+      "failure_diagnosis_results": [],
+      "result": {
+        "phase_result": "CONTINUE"
+      },
+      "outcome": "PASS",
+      "marginal": false,
+      "descriptor_id": 139688169198704,
+      "name": "NewPhaseName",
+      "codeinfo": {
+        "name": "",
+        "docstring": null,
+        "sourcecode": ""
+      }
+    }
+  ],
+  "subtests": [],
+  "branches": [],
+  "diagnosers": [],
+  "diagnoses": [],
+  "log_records": [
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase_executor",
+      "source": "phase_executor.py",
+      "lineno": 329,
+      "timestamp_millis": 1767311533281,
+      "message": "Executing phase trigger_phase (from trigger_phase at test_descriptor.py:316)"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase_executor_thread",
+      "source": "threads.py",
+      "lineno": 116,
+      "timestamp_millis": 1767311533281,
+      "message": "Thread finished: <PhaseExecutorThread: (trigger_phase)>"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase.trigger_phase",
+      "source": "test_state.py",
+      "lineno": 814,
+      "timestamp_millis": 1767311533282,
+      "message": "Phase outcome of trigger_phase is PASS."
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase_executor",
+      "source": "phase_executor.py",
+      "lineno": 359,
+      "timestamp_millis": 1767311533282,
+      "message": "Phase trigger_phase finished with result <PhaseResult.CONTINUE: 'CONTINUE'>"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280",
+      "source": "test_executor.py",
+      "lineno": 332,
+      "timestamp_millis": 1767311533282,
+      "message": "Executing phase NewPhaseName (from example_phase at phase_phase_name_case.py:10)"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase_executor",
+      "source": "phase_executor.py",
+      "lineno": 329,
+      "timestamp_millis": 1767311533282,
+      "message": "Executing phase NewPhaseName (from example_phase at phase_phase_name_case.py:10)"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase_executor_thread",
+      "source": "threads.py",
+      "lineno": 116,
+      "timestamp_millis": 1767311533282,
+      "message": "Thread finished: <PhaseExecutorThread: (NewPhaseName)>"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase.NewPhaseName",
+      "source": "test_state.py",
+      "lineno": 814,
+      "timestamp_millis": 1767311533283,
+      "message": "Phase outcome of NewPhaseName is PASS."
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280.phase_executor",
+      "source": "phase_executor.py",
+      "lineno": 359,
+      "timestamp_millis": 1767311533283,
+      "message": "Phase NewPhaseName finished with result <PhaseResult.CONTINUE: 'CONTINUE'>"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.plugs",
+      "source": "__init__.py",
+      "lineno": 334,
+      "timestamp_millis": 1767311533283,
+      "message": "Tearing down all plugs."
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.test_record.134927:49ca1cf5998f49db:802a4f82a1894585:1767311533280",
+      "source": "test_state.py",
+      "lineno": 504,
+      "timestamp_millis": 1767311533283,
+      "message": "Finishing test execution normally with outcome PASS."
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.util.threads",
+      "source": "threads.py",
+      "lineno": 116,
+      "timestamp_millis": 1767311533283,
+      "message": "Thread finished: TestExecutorThread"
+    },
+    {
+      "level": 10,
+      "logger_name": "openhtf.core.test_descriptor",
+      "source": "test_descriptor.py",
+      "lineno": 349,
+      "timestamp_millis": 1767311533283,
+      "message": "Test completed for openhtf_test, outputting now."
+    }
+  ],
+  "station_id": "giyoon.c.googlers.com",
+  "code_info": {
+    "name": "",
+    "docstring": null,
+    "sourcecode": ""
+  }
+}
