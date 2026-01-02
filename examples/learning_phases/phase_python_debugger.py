@@ -1,5 +1,9 @@
 import openhtf as htf
 
+"""
+this will allow pdb but make sure timeout_s is set to longer to 
+be able to do proper debugging.
+"""
 @htf.PhaseOptions(run_under_pdb=True, timeout_s=20)
 def first_phase(test):
     return htf.PhaseResult.CONTINUE

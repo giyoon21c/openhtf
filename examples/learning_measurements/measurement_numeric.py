@@ -1,6 +1,27 @@
 import openhtf as htf
 from openhtf.util import units
 
+from openhtf.output.callbacks import json_factory
+
+"""
+
+Hardware tests are more complex than simple pass/fail checks like in software
+testing. 
+
+They often require measuring physical values and comparing them to limits. 
+
+OpenHTF simplifies logging and validating numeric, string, and boolean
+values, either individually or in arrays, using built-in decorators.
+
+To Validate
+  numbers
+  string
+  boolean values
+
+individually or in arrays
+
+
+"""
 
 @htf.measures(
   htf.Measurement("temperature")     # Declares the measurement name
@@ -10,7 +31,7 @@ from openhtf.util import units
 )
 def phase_temperature(test):
   #test.measurements.temperature = 250 # Set the temperature value to 25°C
-  test.measurements.temperature = 25 # Set the temperature value to 25°C
+  test.measurements.temperature = 250 # Set the temperature value to 25°C
 
 
 @htf.measures(
@@ -33,6 +54,9 @@ def phase_memory(test):
 
 def main():
   test = htf.Test(phase_temperature, phase_voltage, phase_memory)
+
+  # add a json output callback
+  test.add_output_callbacks(json_factory.OutputToJSON("./measurement_test_results.json", indent=2))
   test.execute(lambda: "SN1234")
 
 if __name__ == "__main__":
