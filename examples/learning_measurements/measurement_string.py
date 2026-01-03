@@ -8,6 +8,7 @@ from openhtf.util import units
 def phase_firmware(test):
     test.measurements.firmware_version = "1.2.4"
 
+
 def main():
     test = htf.Test(phase_firmware)
     test.execute(lambda: "SN1234")
