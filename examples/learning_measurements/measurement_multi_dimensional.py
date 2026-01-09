@@ -11,18 +11,18 @@ output_dir = "."
 
 
 @htf.measures(
-    htf.Measurement("voltage_over_time")
-    .with_dimensions(units.SECOND, units.VOLT) # Input axes: time, voltage
-    .with_units(units.OHM)  # Output unit: resistance in ohms
+  htf.Measurement("voltage_over_time")
+  .with_dimensions(units.SECOND, units.VOLT) # Input axes: time, voltage
+  .with_units(units.OHM)  # Output unit: resistance in ohms
 )
 def phase_voltage_measurement(test):
-    for t in range(10):
-        timestamp = t
-        voltage = round(random.uniform(3.3, 3.5), 2)
-        current = round(random.uniform(0.3, 0.5), 2)
-        print(f'{voltage} {current}')
-        test.measurements.voltage_over_time[timestamp, voltage] = current
-        time.sleep(0.1)
+  for t in range(10):
+    timestamp = t
+    voltage = round(random.uniform(3.3, 3.5), 2)
+    current = round(random.uniform(0.3, 0.5), 2)
+    print(f'{voltage} {current}')
+    test.measurements.voltage_over_time[timestamp, voltage] = current
+    time.sleep(0.1)
 
 def main():
   test = htf.Test(phase_voltage_measurement)
@@ -30,7 +30,7 @@ def main():
   # adds json output
   test.add_output_callbacks(
       json_factory.OutputToJSON(
-          os.path.join(output_dir, '{dut_id}.multi-measumrents.json'), indent=2
+          os.path.join(output_dir, '{dut_id}.multi-dimensional.json'), indent=2
       )
   )
   
@@ -38,3 +38,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
