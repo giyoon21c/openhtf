@@ -1,0 +1,23 @@
+==
+date:
+1.9.2026
+
+topic:
+plugs
+
+ref:
+https://www.openhtf.com/plugs
+
+
+* plugs
+
+manages external hardware and resources with reusable logic
+
+==
+Overview 
+
+Hardware tests often require connections to external resources like
+instruments, UUTs, or other softwares. OpenHTF manages these connections through
+Plugs, reusable classes that handle resource initialization, control, and
+cleanup, separating test logic from resource management for easier maintenance
+and better logging.
