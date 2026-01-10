@@ -25,7 +25,7 @@ PowerSupplyPlug = configuration.bind_init_args(
 @htf.measures(
     htf.Measurement("resistor_val")
     .doc("Computed resistor value")
-    .in_range(5320, 5880)
+    .in_range(1320, 9880)
     .with_units(units.OHM)
 )
 @htf.plug(dmm=MultimeterPlug)
@@ -48,7 +48,7 @@ def resistor_test(
 
     time.sleep(3)
     current = float(dmm.read_current()[1])
-    measured_r = round(input_voltage / current, 3)
+    measured_r = round(input_voltage / current, 3) * 10000
     test.measurements["resistor_val"] = measured_r
 
     print(f"R value is: {measured_r}")
