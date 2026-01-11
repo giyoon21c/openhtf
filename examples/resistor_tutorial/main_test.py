@@ -6,6 +6,8 @@ import openhtf as htf
 from openhtf.output.callbacks import console_summary
 from openhtf.util import configuration, units
 
+# load useful configuration parameters inside a configuration
+# object
 CONF = configuration.CONF
 SIMULATE_MODE = CONF.declare(
     "simulate", default_value=False, description="Set simulation mode"
@@ -20,7 +22,6 @@ MultimeterPlug = configuration.bind_init_args(
 PowerSupplyPlug = configuration.bind_init_args(
     resistor_plugs.PowerSupplyPlug, SIMULATE_MODE
 )
-
 
 @htf.measures(
     htf.Measurement("resistor_val")
